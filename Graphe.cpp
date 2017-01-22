@@ -3,102 +3,71 @@
 #include <iostream>
 using namespace std;
 
-void end(Graphe & g)
-{
-	if(g.A != NULL)
-		delete[]g.A;
-	g.A=NULL;
-}
 void init(Graphe & g, string filename)
 {
-	if(g.A!=NULL)
-		delete[]g.A;
+	vector<bitset<NMAX>> An,temp;
 	fstream f(filename,fstream::in);
-	int k,i,j;
+	int k,i,j,n=0;
 	if(!f)
 	{
 		cout<<"Fichier introuvable"<<endl;
-		g.A=NULL;
 		g.n=0;
 		return;
 	}
 	//on lit n et on alloue la mémoire.
-	f>>g.n;
-	if(g.n<=0)
+	f>>n;
+	g.n=n;
+	if(n<=0)
 	{
 		cout<<"Fichier invalide"<<endl;
-		g.A=NULL;
 		return;
 	}
-	g.A=new uint32_t[g.n*g.n*g.n];
-	g.a_liste.resize(g.n);
-	for(i=0; i<g.n*g.n*g.n; i++)
-		g.A[i]=0;
+	g.A.resize(n);
+	g.D.resize(n);
+	temp.resize(n);
+	An.resize(n);
+	for(i=0; i<n; i++)
+	{
+		g.A[i].reset();
+		g.D[i].resize(n);
+		for(j=0; j<n; j++)
+			g.D[i][j]=NMAX;
+
+	}
 	//on rempli la matrice d'adjacence
-	for(i=0; i<g.n; i++)
+	for(i=0; i<n; i++)
 	{
 		int k;
 		f>>k;
-		g.a_liste[i].resize(k);
 		for(int m=0; m<k; m++)
 		{
 			f>>j;
-			g.A[g.n*i+j]=1;
-			g.a_liste[i][m]=j;
+			g.A[i].set(j);
 		}
 	}
-	uint32_t *left=g.A+g.n*g.n,*right=g.A;
-	for(k=1; k<g.n-1; k++)
-	for(i=0; i<g.n; i++)
+	for(i=0; i<n; i++)
 	{
-		for(j=0; j<g.n; j++)
-		{
-			for(auto m=g.a_liste[j].begin();m!=g.a_liste[j].end();m++)
-			{
-				if(0xffffffffULL-(*(right+*m))<*left)
-				{
-					g.k_max=k-1;
-					cout<<"k_max = "<<g.k_max<<endl;
-					return;
-				}
-				*left+=(*(right+*m));
-			}
-			left++;
-		}
-		right+=g.n;
+		g.D[i][i]=0;
+		for(j=0; j<n; j++)
+			if(g.A[i].test(j))
+				g.D[i][j]=1;
 	}
-	
-	right=g.A;
-	//calcul de A*
-	for(k=0; k<g.n-1; k++)
+	An=g.A;
+	for(k=2; k<n; k++)
 	{
-		left=g.A+(g.n-1)*g.n*g.n;
-		for(i=0; i<g.n; i++)
-		for(j=0; j<g.n; j++)
-		{
-			if(0xffffffffULL-*right<*left)
-			{
-				g.k_max=g.n-2;
-				cout<<"k_max = "<<g.k_max<<endl;
-				return;
-			}
-			*left+=*right;
-			right++;
-			left++;
-		}
+		//calcul de A*An
+		for(i=0; i<n; i++)
+		for(j=0; j<n; j++)
+		temp[i].set(j,(An[i]&g.A[j]).any());
+		An=temp;
+		//mise à jour de D
+		for(i=0; i<n; i++)
+		for(j=0; j<n; j++)
+			if(g.D[i][j]==NMAX && An[i].test(j))
+				g.D[i][j]=k;
 	}
-	g.k_max=g.n-1;
-	cout<<"k_max = "<<g.k_max<<endl;	
+	for(i=0; i<n; i++)
+		for(j=0; j<n; j++)
+			g.D[i][j]=NMAX-g.D[i][j];
 }
 
-void print(Graphe const & g, int k)
-{
-	if(k>g.k_max)
-		k=g.k_max;
-	for(int i=0; i<g.n; i++)
-	{
-		for(int j=0; j<g.n; j++)
-			cout<<g.A[k*g.n*g.n+i*g.n+j]<<" ";
-		cout<<endl;
-	}
-}
