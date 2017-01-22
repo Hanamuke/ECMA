@@ -119,14 +119,7 @@ void loadModel(IloEnv env, IloModel model, Graphe const & g, Graphe const & _g,v
 {
 	int offset=0; //||A||-||A_barre|| (mais elles ne contiennent que des coefficients positifs)
 	int N=g.n,_N=_g.n;
-	/*for(int i=0; i<N; i++)
-		for(int j=0; j<N; j++)
-		{
-			if(i<_N && j<_N && _g.A[i].test(j))
-				offset-=1;
-			if(g.A[i].test(j))
-			offset+=1;
-		}
+	/*
 
 	IloExpr objectif(env);
 	cout<< "N="<<N<<endl;
