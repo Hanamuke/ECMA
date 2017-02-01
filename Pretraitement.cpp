@@ -1,10 +1,13 @@
 #include "Pretraitement.h"
 #include <list>
 #include <iostream>
+#include <time.h>
 using namespace std;
 
 bool pretraitement(Graphe const & g, Graphe const & _g,vector<vector<bool>> & x_mask)
 {
+	clock_t t0=clock();
+	cout<<"Debut du pretraitement ... ";
 	int N=g.n,_N=_g.n;
 	list<unsigned int>::iterator l,_l;
 	if(N<_N)
@@ -40,62 +43,7 @@ bool pretraitement(Graphe const & g, Graphe const & _g,vector<vector<bool>> & x_
 					x_mask[i][j]=false;
 					break;
 				}
-			
-	/*bool changed=true;
-	int one_index;
-	while(changed)
-	{
-		changed=false;
-		for(int i=0; i<N; i++)
-		{
-			one_index=-1;
-			for(int j=0; j<N; j++)
-			{
-				if(x_mask[i][j])
-				{
-					if(one_index!=-1)
-					{
-						one_index=-2;
-						break;
-					}
-					one_index=j;
-				}
-			}
-			if(one_index==-1)
-				return true;
-			if(one_index!=-2)
-				for(int j=0; j<N; j++)
-					if(j!=i)
-					{
-						if(x_mask[j][one_index])
-							changed=true;
-						x_mask[j][one_index]=false;
-					}
-			one_index=-1;
-			for(int j=0; j<N; j++)
-			{
-				if(x_mask[j][i])
-				{
-					if(one_index!=-1)
-					{
-						one_index=-2;
-						break;
-					}
-					one_index=j;
-				}
-			}
-			if(one_index==-1)
-				return true;
-			if(one_index!=-2)
-				for(int j=0; j<N; j++)
-					if(j!=i)
-					{
-						if(x_mask[one_index][j])
-							changed=true;
-						x_mask[one_index][j]=false;
-					}
-		}
-	}*/
+	cout<<"OK ("<<(double)(clock()-t0)/(double)CLOCKS_PER_SEC<<".sec)"<<endl;
 	return false;
 }
 
@@ -113,66 +61,4 @@ void print(vector<vector<bool>> & x_mask)
 		cout<<endl;
 	}
 	cout<<"non-zero : "<<cnt<<"/"<<x_mask.size()*x_mask.size()<<endl;
-}
-
-void loadModel(IloEnv env, IloModel model, Graphe const & g, Graphe const & _g,vector<vector<bool>> const & x_mask,IloBoolVarArray x)
-{
-	int offset=0; //||A||-||A_barre|| (mais elles ne contiennent que des coefficients positifs)
-	int N=g.n,_N=_g.n;
-	/*
-
-	IloExpr objectif(env);
-	cout<< "N="<<N<<endl;
-	for(int i=0; i<N; i++)
-		for(int j=0; j<N; j++)
-			for(int k=0; k<N; k++)
-			{
-				if(x_mask[i][k] && g.A[k].test(j))
-				objectif+=x[i*N+k];
-				if(i<_N && k<_N && x_mask[k][j] && _g.A[i].test(k))
-				objectif-=x[k*N+j];
-			}
-	cout<<"offset="<<offset<<endl;*/
-	model.add(IloMinimize(env,0));
-
-	//contrainte sur la somme des x sur les ligne et collonnes
-	IloExprArray ligne(env,_N);
-	for(int m=0; m<_N; m++)
-		ligne[m]=IloExpr(env);
-	IloExprArray collonne(env,N);
-	for(int m=0; m<N; m++)
-		collonne[m]=IloExpr(env);
-
-
-	for(int i=0; i<N; i++)
-	{
-		for(int j=0; j<N; j++)
-		{
-			if(x_mask[i][j] && i<_N)
-			ligne[i]+=x[i*N+j];
-			if(x_mask[j][i] && j<_N)
-			collonne[i]+=x[j*N+i];
-			if(!x_mask[i][j] || i>=_N)
-				model.add(x[i*N+j]==0); //contrainte liées au prétraitement
-		}
-		//contraintes de X matrice de transposition, contrainte paire sur les colonnes et contraintes impaires sur les lignes (je crois)
-		if(i<_N)
-		model.add(ligne[i]==1);
-		model.add(collonne[i]<=1);
-	}
-	IloExprArray y_expr(env,N*_g.n);
-	for(int m=0; m<_g.n*N; m++)
-		y_expr[m]=IloExpr(env);
-	for(int i=0; i<_N; i++)
-		for(int j=0; j<N; j++)
-		{
-			for(int k=0; k<N; k++)
-			{
-				if(x_mask[i][k] && g.A[k].test(j))
-				y_expr[i*N+j]+=x[k+N*i];
-				if(k<_N && x_mask[k][j] && _g.A[i].test(k))
-				y_expr[i*N+j]-=x[k*N+j];
-			}
-			model.add(y_expr[i*N+j]>=0);
-		}
 }
