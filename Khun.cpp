@@ -18,6 +18,7 @@ vector<int> previous;//enregistre le parcours du chemin augmentant.
 void augment();
 void update_labels();
 void add_to_tree(int x, int prevx);
+void initialize(vector<vector<int>> const & in);
 
 int khun(vector<vector<int>> const & in, vector<int>& ret)
 {
