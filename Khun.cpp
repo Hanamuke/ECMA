@@ -18,7 +18,7 @@ vector<int> previous;//enregistre le parcours du chemin augmentant.
 void augment();
 void update_labels();
 void add_to_tree(int x, int prevx);
-void initialize(vector<vector<int>> const & in);
+void initialize();
 
 int khun(vector<vector<int>> const & in, vector<int>& ret)
 {
@@ -51,7 +51,7 @@ int khun(vector<vector<int>> const & in, vector<int>& ret)
 				profit[x][y] = in[x][y];
 	}
 	//ici on a toujours M>=N
-	initialize(in);
+	initialize();
 	augment();
 	for (int x = 0; x < N; x++)
 		val += profit[x][XY[x]];
@@ -62,7 +62,7 @@ int khun(vector<vector<int>> const & in, vector<int>& ret)
 	return val;
 }
 
-void initialize(vector<vector<int>> const & in)
+void initialize()
 {
 	best_match = 0;
 	labelX.resize(N);
