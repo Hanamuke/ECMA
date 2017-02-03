@@ -2,6 +2,7 @@
 #include <fstream>
 #include "Graphe.h"
 #include "Pretraitement.h"
+#include "Khun.h"
 #include <ilcplex/ilocplex.h>
 #define BENCH_FOLDER "../../benchmarks/" 
 //#define FORCE_PREPROCESSING
@@ -14,7 +15,6 @@ void loadModel(IloEnv, IloModel, Graphe const &, Graphe const &, vector<vector<b
 
 int main()
 {
-
 	//string problem="test/";
 	string problem = "si2_bvg_b03_400/si2_b03_m400.02/";
 	//string problem="si4_rand_r005_200/si4_r005_m200.04/";
@@ -45,10 +45,10 @@ int main()
 			{
 				pretraitement(g, g_barre, x_mask);
 				save_pretraitement(BENCH_FOLDER + problem + "mask", x_mask);
-			}
+		}
 #endif
 			loadModel(env, model, g, g_barre, x_mask, x);
-		}
+	}
 		IloCplex cplex(model);
 		//cplex.setParam(IloCplex::NumParam::TiLim ,100);
 		cplex.exportModel("projet.lp");
@@ -60,7 +60,7 @@ int main()
 		cplex.getValues(vals, x);
 		//env.out() << "Values        = " << vals << endl;
 		//cplex.exportModel("projet.lp");
-	}
+}
 	catch (IloException& e) {
 		cerr << "Concert Exception: " << e << endl;
 	}
@@ -87,7 +87,7 @@ void loadModel(IloEnv env, IloModel model, Graphe const & g, Graphe const & _g, 
 	{
 		for (int j = 0; j < N; j++)
 		{
-			if (i < _N && x_mask[i][j] )
+			if (i < _N && x_mask[i][j])
 				ligne[i] += x[i*N + j];
 			if (j < _N && x_mask[j][i])
 				collonne[i] += x[j*N + i];
