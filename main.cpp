@@ -11,6 +11,47 @@ void loadModel(IloEnv, IloModel , Graphe const & , Graphe const & ,vector<vector
 
 ILOSTLBEGIN
 
+ILOUSERCUTCALLBACK5(CutCallback, IloBoolVarArray, x, IloExprArray, y_expr, vector<vector<int>>, y_indices, int, N, int, _N){
+
+   IloEnv masterEnv = getEnv();
+   IloInt numEdges = x.getSize();
+
+   // Get the current x solution
+  
+   IloBoolArray xSol(masterEnv, numEdges);
+   for (int i = 0; i < numEdges; ++i) {
+	   xSol[i]=getValue(x[i]);
+   }
+
+   int nbAjoute=0;
+
+   for(int i=0; i<_N; i++)
+		{
+			for(int j=0; j<N; j++)
+			{
+				IloInt total=0;
+				IloInt taille=y_indices[i*N+j].size();
+				for(int k=0; k<taille; k++){
+					int ind=y_indices[i*N+j][k];
+					if(ind<0)
+						total-=xSol[-ind-1];
+					else
+						total+=xSol[ind-1];
+				}
+				if(total<0){
+					nbAjoute++;
+					try{
+						add(y_expr[i*N+j]>=0).end();
+					}catch(IloException e){
+						throw e;
+					}
+				}
+			}
+		}
+
+   cout<<"Nombre Ajoute :"<<nbAjoute<<endl;
+}
+
 ILOLAZYCONSTRAINTCALLBACK5(LazyCallback, IloBoolVarArray, x, IloExprArray, y_expr, vector<vector<int>>, y_indices, int, N, int, _N){
 
    IloEnv masterEnv = getEnv();
@@ -108,6 +149,7 @@ int main()
 		IloCplex cplex(model);
 		//cplex.setParam(IloCplex::NumParam::TiLim ,100);
 
+		cplex.use(CutCallback(env,x,y_expr,y_indices,N,_N));
 		cplex.use(LazyCallback(env,x,y_expr,y_indices,N,_N));
 
 		cplex.exportModel("projet.lp");
