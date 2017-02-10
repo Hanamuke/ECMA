@@ -1,49 +1,29 @@
 #include "Pretraitement.h"
+#include "Hopcroft.h"
 #include <list>
 #include <iostream>
 #include <time.h>
 #include <fstream>
+#include <queue>
+#include <set>
 using namespace std;
-
+int setArc(Graphe const &, Graphe const &, vector<vector<bool>>&in, int i, int j, vector<int> & mask_f);
+void AC(Graphe const &, Graphe const &, vector<vector<bool>>&in);
 bool pretraitement(Graphe const & g, Graphe const & _g, vector<vector<bool>> & x_mask)
 {
 	clock_t t0 = clock();
 	cout << "Debut du pretraitement ... ";
 	int N = g.n, _N = _g.n;
-	list<unsigned int>::iterator l, _l;
 	if (N < _N)
 		return true;
 	x_mask.resize(_N);
 	for (int i = 0; i < _N; i++)
 		x_mask[i].resize(N);
+
 	for (int i = 0; i < _N; i++)
 		for (int j = 0; j < N; j++)
 			x_mask[i][j] = true;
-	vector<list<unsigned int>> a_ordered;
-	a_ordered.resize(_N + N);
-	//on trie par ligne les coefficients de D
-	for (int m = 0; m < _N + N; m++)
-		a_ordered[m].clear();
-	for (int i = 0; i < N; i++)
-		for (int j = 0; j < N; j++)
-		{
-			a_ordered[i].push_back(g.D[i][j]);
-			if (i < _N && j < _N)
-				a_ordered[N + i].push_back(_g.D[i][j]);
-			else if (i < _N)
-				a_ordered[N + i].push_back(0);
-		}
-	for (int m = 0; m < _N + N; m++)
-		a_ordered[m].sort();
-	//on vérifie si il y a des incompatibilités.
-	for (int i = 0; i < _N; i++)
-		for (int j = 0; j < N; j++)
-			for (l = a_ordered[j].begin(), _l = a_ordered[i + N].begin(); l != a_ordered[j].end(), _l != a_ordered[i + N].end(); l++, _l++)
-				if (*l < *_l)
-				{
-					x_mask[i][j] = false;
-					break;
-				}
+	AC(g, _g, x_mask);
 	cout << "OK (" << (double)(clock() - t0) / (double)CLOCKS_PER_SEC << ".sec)" << endl;
 	return false;
 }
@@ -77,7 +57,7 @@ void save_pretraitement(string path, vector<vector<bool>> const & x_mask)
 bool load_pretraitement(string path, vector<vector<bool>> & x_mask)
 {
 	fstream f(path, fstream::in);
-	int n, _n,s;
+	int n, _n, s;
 	clock_t t0 = clock();
 	if (!f)
 		return false;
@@ -87,7 +67,7 @@ bool load_pretraitement(string path, vector<vector<bool>> & x_mask)
 	f >> n;
 	for (int i = 0; i < _n; i++)
 		x_mask[i].resize(n);
-	for(int i=0; i<_n; i++)
+	for (int i = 0; i < _n; i++)
 		for (int j = 0; j < n; j++)
 		{
 			f >> s;
@@ -96,3 +76,93 @@ bool load_pretraitement(string path, vector<vector<bool>> & x_mask)
 	cout << "OK" << endl;
 }
 
+int setArc(Graphe const & g, Graphe const & _g, vector<vector<bool>>&in, int i, int j, vector<int> & mask_f) //O(N*_N)
+{
+	int ret = 0;
+	for (int m = 0; m < _g.n; m++)
+		if (m != i && in[m][j])
+		{
+			in[m][j] = false;
+			mask_f[ret++] = m*g.n + j;
+		}
+	for (int m = 0; m < g.n; m++)
+		if (m != j && in[i][m])
+		{
+			in[i][m] = false;
+			mask_f[ret++] = i*g.n + m;
+		}
+	//on ajoute les contraintes d'exclusion liées à xij=1
+	for (int l = 0; l < _g.n; l++)
+		for (int m = 0; m < g.n; m++)
+			if (in[l][m] && _g.D[i][l] > g.D[j][m])
+			{
+				in[l][m] = false;
+				mask_f[ret++] = l*g.n + m;
+			}
+	return ret;
+}
+
+void AC(Graphe const & g, Graphe const & _g, vector<vector<bool>>& in)
+{
+	//[i,j] -> i*N+j 
+	int N = g.n, _N = _g.n;
+	vector<set<int>> dependencies; //liste des arcs qui dépendent de l'arc
+	vector<vector<int>> XY; //couplage obtenu pas l'algorithme de Hopcroft-Karp
+	queue<int> q; //liste des arcs à vérifier
+	vector<vector<bool>> rmask = in;
+	vector<bool> inQueue;
+	vector<int> mask_f;
+	int ptr = 0;
+	int changei = -1, changej = -1;
+	mask_f.resize(N*_N);
+	dependencies.resize(N*_N);
+	inQueue.resize(N*_N);
+	XY.resize(N*_N);
+	for (int i = 0; i < _N*N; i++)
+		XY[i].resize(_N);
+	for (int i = 0; i < _N; i++)
+		for (int j = 0; j < N; j++)
+			if (in[i][j])
+			{
+				q.push(i*N + j);
+				inQueue[i*N + j] = true;
+			}
+			else
+				inQueue[i*N + j] = false;
+	while (!q.empty())
+	{
+		int i = q.front() / N, j = q.front() % N, index = q.front();
+		q.pop();
+		inQueue[index] = false;
+		while (ptr > 0)
+		{
+			//j'aurais aimé faire ça en une seule ligne mais je crois qu'avec deux décrément dans la même ligne ça le décrémente deux fois, en tout cas ça marche pas.
+			--ptr;
+			rmask[mask_f[ptr] / N][mask_f[ptr] % N] = true;
+		}
+		if (changei != -1)
+			rmask[changei][changej] = false;
+		ptr = setArc(g, _g, rmask, i, j, mask_f);
+		for (int l = 0; l < _N; l++)
+			dependencies[XY[index][l] + N*l].erase(index); //on supprime les anciennes dépendances de [i;j]
+		if (Algo::Hopcroft(rmask, XY[index]) < _N) //si on ne trouve pas de couplage
+		{
+			in[i][j] = 0; //on force l'arc à 0;
+			changei = i;
+			changej = j;
+			for (auto k = dependencies[index].begin(); k != dependencies[index].end(); k++)//il faut alors vérifier les arcs qui en étaient dépendant
+				if (!inQueue[*k])
+				{
+					q.push(*k);
+					inQueue[*k] = true;
+				}
+		}
+		else //sinon on notes les nouvelles dépendances de [i;j]
+		{
+			changei = -1;
+			for (int l = 0; l != _N; l++)
+				if (l != i)
+					dependencies[XY[index][l] + N*l].insert(index);
+		}
+	}
+}

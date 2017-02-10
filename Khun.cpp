@@ -14,6 +14,7 @@ vector<int> XY, YX; //sommet matché avec X et Y respectivement
 vector<bool> S, T; //Sous-ensembles de X et Y respectivement. 
 vector<int> slack, slackX; //enregistre de combien on pourra ajuster les labels par ajout d'arêtes au matching
 vector<int> previous;//enregistre le parcours du chemin augmentant.
+vector<int> q; //queue pour le BFS
 
 void augment();
 void update_labels();
@@ -81,6 +82,7 @@ void initialize()
 	slack.resize(M);
 	slackX.resize(M);
 	previous.resize(N);
+	q.resize(M);
 }
 
 void augment()
@@ -89,8 +91,6 @@ void augment()
 		return;
 	int x, y, root;
 	int wr = 0, rd = 0;//positions de lecture et d'écriture dans la queue on écrit avec q[wr++] et on lit avec q[rd++]
-	vector<int> q; //queue pour le BFS
-	q.resize(M);
 	fill(S.begin(), S.end(), false);
 	fill(T.begin(), T.end(), false);
 	fill(previous.begin(), previous.end(), -1);
