@@ -7,8 +7,9 @@
 #include <queue>
 #include <set>
 using namespace std;
-int setArc(Graphe const &, Graphe const &, vector<vector<bool>>&in, int i, int j, vector<int> & mask_f);
-void AC(Graphe const &, Graphe const &, vector<vector<bool>>&in);
+int setArc(Graphe const &, Graphe const &, vector<vector<bool>>&, int, int, vector<int> &);
+void AC(Graphe const &, Graphe const &, vector<vector<bool>>&);
+void SC(Graphe const &, Graphe const &, vector<vector<bool>>&);
 bool pretraitement(Graphe const & g, Graphe const & _g, vector<vector<bool>> & x_mask)
 {
 	clock_t t0 = clock();
@@ -23,6 +24,7 @@ bool pretraitement(Graphe const & g, Graphe const & _g, vector<vector<bool>> & x
 	for (int i = 0; i < _N; i++)
 		for (int j = 0; j < N; j++)
 			x_mask[i][j] = true;
+	SC(g, _g, x_mask);
 	AC(g, _g, x_mask);
 	cout << "OK (" << (double)(clock() - t0) / (double)CLOCKS_PER_SEC << ".sec)" << endl;
 	return false;
@@ -94,7 +96,7 @@ int setArc(Graphe const & g, Graphe const & _g, vector<vector<bool>>&in, int i, 
 	//on ajoute les contraintes d'exclusion liées à xij=1
 	for (int l = 0; l < _g.n; l++)
 		for (int m = 0; m < g.n; m++)
-			if (in[l][m] && _g.D[i][l] > g.D[j][m])
+			if (in[l][m] && _g.D[i][l] < g.D[j][m])
 			{
 				in[l][m] = false;
 				mask_f[ret++] = l*g.n + m;
@@ -165,4 +167,13 @@ void AC(Graphe const & g, Graphe const & _g, vector<vector<bool>>& in)
 					dependencies[XY[index][l] + N*l].insert(index);
 		}
 	}
+}
+
+void SC(Graphe const&g, Graphe const&_g, vector<vector<bool>> &in)
+{
+	for (int i = 0; i < _g.n; i++)
+		for (int j = 0; j < g.n; j++)
+			if (g.degre[j] < _g.degre[i])
+				in[i][j] = 0;
+	return;
 }

@@ -2,10 +2,13 @@
 #include <fstream>
 #include <iostream>
 #include <time.h>
+#include <algorithm>
 using namespace std;
 
 void distanceMatrix(Graphe&); //calcule la matrice des distances de G
-void dijkstra(Graphe&, int); //calcule une ligne de la matrice des distances à l'aide d'un dijkstra 
+void BFS(Graphe&, int); //calcule une ligne de la matrice des distances à l'aide d'un dijkstra 
+void cutminMatrix(Graphe&);
+void cutmin(Graphe&, int, int);
 
 void init(Graphe & g, string filename)
 {
@@ -29,14 +32,20 @@ void init(Graphe & g, string filename)
 	t0 = clock();
 	g.A.resize(n);
 	g.D.resize(n);
+	g.cutmin.resize(n);
 	g.voisins.resize(n);
+	g.degre.resize(n);
+	fill(g.degre.begin(), g.degre.end(), 0);
 	for (i = 0; i < n; i++)
 	{
 		g.A[i].reset();
 		g.D[i].resize(n);
+		g.cutmin[i].resize(n);
 		for (j = 0; j < n; j++)
+		{
 			g.D[i][j] = NMAX;
-
+			g.cutmin[i][j] = NMAX;
+		}
 	}
 	//on rempli la matrice d'adjacence
 	for (i = 0; i < n; i++)
@@ -47,21 +56,15 @@ void init(Graphe & g, string filename)
 		{
 			f >> j;
 			g.A[i].set(j);
-		}
-	}
-	for (i = 0; i < n; i++)
-	{
-		for (j = 0; j < n; j++)
-		{
-			if (g.A[i].test(j))
-				g.voisins[i].push_back(j);
+			g.voisins[i].push_back(j);
+			g.degre[i]++;
 		}
 	}
 	cout << "OK (" << (double)(clock() - t0) / (double)CLOCKS_PER_SEC << " sec.)" << endl;
 	distanceMatrix(g);
 }
 
-void distanceMatrix(Graphe & g)
+void distanceMatrix(Graphe & g) //O(N^3)
 {
 	clock_t t0, t1;
 	t0 = clock();
@@ -71,15 +74,12 @@ void distanceMatrix(Graphe & g)
 	for (int k = 0; k < n; k++)
 	{
 		cout << "\r" << (100 * k) / n << "%" << flush;
-		dijkstra(g, k);
+		BFS(g, k);
 	}
 	cout << "\r100% (" << (double)(clock() - t0) / (double)CLOCKS_PER_SEC << " sec.)" << endl;
-	for (int i = 0; i < n; i++)
-		for (int j = 0; j < n; j++)
-			g.D[i][j] = NMAX - g.D[i][j];
 	t1 = clock();
 }
-void dijkstra(Graphe& g, int i) //version de l'algorithme de Dijkstra adaptée au cas des poids unitaires, complexité linéaire en nombre d'arêtes.
+void BFS(Graphe& g, int i) //version de l'algorithme de Dijkstra adaptée au cas des poids unitaires, complexité linéaire en nombre d'arêtes.
 {
 	list<int> temp[2];
 	int index = 0, dist = 1;
@@ -98,5 +98,21 @@ void dijkstra(Graphe& g, int i) //version de l'algorithme de Dijkstra adaptée au
 				}
 		dist++;
 	}
+}
+
+void cutminMatrix(Graphe &g)
+{
+	for (int i = 0; i < g.n; i++)
+		for (int j = 0; j < g.n; j++)
+			if (g.cutmin[j][i] == NMAX)
+				cutmin(g, i, j);
+			else
+				g.cutmin[i][j] = g.cutmin[j][i];
+	return;
+}
+
+void cutmin(Graphe &g, int i, int j)
+{
+	return;
 }
 

@@ -11,8 +11,13 @@ typedef unsigned __int32 uint32_t;
 struct Graphe
 {
 	vector<bitset<NMAX>> A; //matrice d'adjacence (symétrique)
+	//critères binaires
 	vector<vector<unsigned short>> D;//matrice de  n-distance de G
+	vector<vector<unsigned short>> cutmin;
+	//critères unaires
+	vector<int> degre;
 	vector<list<int>> voisins;
+
 	int n; //dimension de la matrice carrée
 } ;
 void init(Graphe & g,string filename); 

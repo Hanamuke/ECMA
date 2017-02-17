@@ -15,8 +15,8 @@ void loadModel(IloEnv, IloModel, Graphe const &, Graphe const &, vector<vector<b
 
 int main()
 {
-	string problem = "test/";
-	//string problem = "si2_bvg_b03_200/si2_b03_m200.02/";
+	//string problem = "test/";
+	string problem = "si2_bvg_b03_200/si2_b03_m200.02/";
 	//string problem="si4_rand_r005_200/si4_r005_m200.04/";
 	//string problem="scalefree/F.01/";
 	IloEnv env;
