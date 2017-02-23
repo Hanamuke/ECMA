@@ -96,7 +96,7 @@ int setArc(Graphe const & g, Graphe const & _g, vector<vector<bool>>&in, int i, 
 	//on ajoute les contraintes d'exclusion liées à xij=1
 	for (int l = 0; l < _g.n; l++)
 		for (int m = 0; m < g.n; m++)
-			if (in[l][m] && _g.D[i][l] < g.D[j][m])
+			if (in[l][m] && (_g.D[i][l] < g.D[j][m] || _g.C[i][l] > g.C[j][m]))
 			{
 				in[l][m] = false;
 				mask_f[ret++] = l*g.n + m;

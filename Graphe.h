@@ -13,7 +13,7 @@ struct Graphe
 	vector<bitset<NMAX>> A; //matrice d'adjacence (symétrique)
 	//critères binaires
 	vector<vector<unsigned short>> D;//matrice de  n-distance de G
-	vector<vector<unsigned short>> cutmin;
+	vector<vector<unsigned short>> C;//matrice des coupes min
 	//critères unaires
 	vector<int> degre;
 	vector<list<int>> voisins;

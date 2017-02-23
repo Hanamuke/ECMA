@@ -9,15 +9,16 @@
 using namespace std;
 
 void loadModel(IloEnv, IloModel, Graphe const &, Graphe const &, vector<vector<bool>> const &, IloBoolVarArray);
+void toTulip(Graphe const&, string path);
 
 
 
 
 int main()
 {
-	//string problem = "test/";
-	string problem = "si2_bvg_b03_200/si2_b03_m200.02/";
-	//string problem="si4_rand_r005_200/si4_r005_m200.04/";
+	string problem = "test/";
+	//string problem = "si2_bvg_b03_200/si2_b03_m200.02/";
+	//string problem = "si4_rand_r005_200/si4_r005_m200.04/";
 	//string problem="scalefree/F.01/";
 	IloEnv env;
 	/*Le prétraitement renvoie une matrice x_mask qui indique si x_ij peut être à un. On introduira seulement donc les termes nécessaires
@@ -29,26 +30,28 @@ int main()
 		IloNumArray vals(env);
 		IloBoolVarArray x(env);
 		//{ //ces accolades font restreingnent la range des graphes et de x_mask, ils sont détruits à la fin des accolades, ils occuperont pas de la mémoire pendant la résolution.
-			Graphe g;
-			init(g, BENCH_FOLDER + problem + "target");
-			Graphe g_barre;
-			init(g_barre, BENCH_FOLDER + problem + "pattern");
-			for (int i = 0; i < g.n*g_barre.n; i++)
-				x.add(IloBoolVar(env));
-			vector<vector<bool>> x_mask;
+		Graphe g;
+		init(g, BENCH_FOLDER + problem + "target");
+		Graphe g_barre;
+		init(g_barre, BENCH_FOLDER + problem + "pattern");
+		//toTulip(g, BENCH_FOLDER + problem + "tp_target.tlp");
+		//toTulip(g_barre, BENCH_FOLDER + problem + "tp_patter.tlp");
+		for (int i = 0; i < g.n*g_barre.n; i++)
+			x.add(IloBoolVar(env));
+		vector<vector<bool>> x_mask;
 #ifdef FORCE_PREPROCESSING
-			pretraitement(g, g_barre, x_mask);
-			save_pretraitement(BENCH_FOLDER + problem + "mask", x_mask);
+		pretraitement(g, g_barre, x_mask);
+		save_pretraitement(BENCH_FOLDER + problem + "mask", x_mask);
 #endif
 #ifndef FORCE_PREPROCESSING
-			if (!load_pretraitement(BENCH_FOLDER + problem + "mask", x_mask))
-			{
-				pretraitement(g, g_barre, x_mask);
-				save_pretraitement(BENCH_FOLDER + problem + "mask", x_mask);
-			}
+		if (!load_pretraitement(BENCH_FOLDER + problem + "mask", x_mask))
+		{
+			pretraitement(g, g_barre, x_mask);
+			save_pretraitement(BENCH_FOLDER + problem + "mask", x_mask);
+		}
 #endif
-			loadModel(env, model, g, g_barre, x_mask, x);
-			IloCplex cplex(model);
+		loadModel(env, model, g, g_barre, x_mask, x);
+		IloCplex cplex(model);
 		//}
 		//cplex.setParam(IloCplex::NumParam::TiLim ,100);
 		cplex.exportModel("projet.lp");
@@ -116,6 +119,25 @@ void loadModel(IloEnv env, IloModel model, Graphe const & g, Graphe const & _g, 
 			}
 			model.add(y_expr[i*N + j] >= 0);
 		}
+}
+
+void toTulip(Graphe const& g, string path)
+{
+	fstream f(path, fstream::out | fstream::trunc);
+	f << "(tlp \"2.0\"" << endl;
+	f << "(nodes";
+	for (int i = 0; i < g.n; i++)
+		f << " " << i;
+	f << ")" << endl;
+	int k = 0;
+	for (int i = 0; i < g.n; i++)
+		for (int j = i + 1; j < g.n; j++)
+			if (g.A[i][j])
+			{
+				f << "(edge " << k << " " << i << " " << j << ")" << endl;
+				k++;
+			}
+	f << ")";
 }
 
 
