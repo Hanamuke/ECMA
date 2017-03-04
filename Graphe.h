@@ -16,6 +16,7 @@ struct Graphe
 	vector<vector<unsigned short>> C;//matrice des coupes min
 	//critères unaires
 	vector<int> degre;
+	vector<int> cycle_min;
 	vector<list<int>> voisins;
 
 	int n; //dimension de la matrice carrée

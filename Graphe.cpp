@@ -9,6 +9,7 @@ void distanceMatrix(Graphe&); //calcule la matrice des distances de G
 void BFS(Graphe&, int); //calcule une ligne de la matrice des distances à l'aide d'un dijkstra 
 void cutminMatrix(Graphe&);
 int FFA(Graphe const&, int, int, vector<bool>&);
+int cyclemin(Graphe & g, int i);
 
 void init(Graphe & g, string filename)
 {
@@ -35,7 +36,9 @@ void init(Graphe & g, string filename)
 	g.C.resize(n);
 	g.voisins.resize(n);
 	g.degre.resize(n);
+	g.cycle_min.resize(n);
 	fill(g.degre.begin(), g.degre.end(), 0);
+	fill(g.cycle_min.begin(), g.cycle_min.end(), NMAX);
 	for (i = 0; i < n; i++)
 	{
 		g.A[i].reset();
@@ -60,6 +63,8 @@ void init(Graphe & g, string filename)
 			g.degre[i]++;
 		}
 	}
+	for (i = 0; i < n; i++)
+		g.cycle_min[i] = cyclemin(g, i);
 	cout << "OK (" << (double)(clock() - t0) / (double)CLOCKS_PER_SEC << " sec.)" << endl;
 	distanceMatrix(g);
 	cutminMatrix(g);
@@ -81,22 +86,20 @@ void distanceMatrix(Graphe & g) //O(N^3)
 }
 void BFS(Graphe& g, int i) //version de l'algorithme de Dijkstra adaptée au cas des poids unitaires, complexité linéaire en nombre d'arêtes.
 {
-	list<int> temp[2];
-	int index = 0, dist = 1;
-	temp[index].push_back(i);
+	vector<int> q;
+	int wr = 0, rd = 0;
+	q.resize(g.n);
+	q[wr++] = i;
 	g.D[i][i] = 0;
-	while (!temp[index].empty())
+	while (rd < wr)
 	{
-		index ^= 1;
-		temp[index].clear();
-		for (auto k = temp[index ^ 1].begin(); k != temp[index ^ 1].end(); k++)
-			for (auto m = g.voisins[*k].begin(); m != g.voisins[*k].end(); m++)
-				if (g.D[i][*m] == NMAX)
-				{
-					g.D[i][*m] = dist;
-					temp[index].push_back(*m);
-				}
-		dist++;
+		int index = q[rd++];
+		for (auto k = g.voisins[index].begin(); k != g.voisins[index].end(); k++)
+			if (g.D[i][*k] == NMAX)
+			{
+				q[wr++] = *k;
+				g.D[i][*k] = g.D[i][index] + 1;
+			}
 	}
 }
 
@@ -184,12 +187,12 @@ int FFA(Graphe const&g, int s, int t, vector<bool> &ret) //ret vaut true si le s
 		while (rd < wr)
 		{
 			int k = q[rd++];
-			for(auto m=g.voisins[k].begin(); m!=g.voisins[k].end(); m++)
-				if (!mark[*m] && c[k][*m]>0)
+			for (auto m = g.voisins[k].begin(); m != g.voisins[k].end(); m++)
+				if (!mark[*m] && c[k][*m] > 0)
 				{
 					if (*m == t)
 					{
-						int i=k,j=*m;
+						int i = k, j = *m;
 						while (i != t)
 						{
 							c[i][j]--;
@@ -199,7 +202,7 @@ int FFA(Graphe const&g, int s, int t, vector<bool> &ret) //ret vaut true si le s
 							augmented = true;
 						}
 						val++;
-						rd = g.n+1;
+						rd = g.n + 1;
 						break;
 					}
 					pred[*m] = k;
@@ -218,7 +221,7 @@ int FFA(Graphe const&g, int s, int t, vector<bool> &ret) //ret vaut true si le s
 	while (rd < wr)
 	{
 		int i = q[rd++];
-		for(auto m=g.voisins[i].begin(); m!=g.voisins[i].end(); m++)
+		for (auto m = g.voisins[i].begin(); m != g.voisins[i].end(); m++)
 			if (!ret[*m] && c[i][*m] > 0)
 			{
 				q[wr++] = *m;
@@ -226,5 +229,40 @@ int FFA(Graphe const&g, int s, int t, vector<bool> &ret) //ret vaut true si le s
 			}
 	}
 	return val;
+}
+
+int cyclemin(Graphe & g, int i)
+{
+	if (g.voisins[i].size() < 2)
+		return NMAX;
+	int min = NMAX;
+	vector<int> q;
+	vector<int> dist;
+	dist.resize(g.n);
+	q.resize(g.n);
+	int wr = 0, rd = 0;
+	for (auto j = g.voisins[i].begin(); j != g.voisins[i].end(); j++)
+	{
+		fill(dist.begin(), dist.end(), NMAX);
+		wr = rd = 0;
+		q[wr++] = *j;
+		dist[*j] = 1;
+		while (rd < wr)
+		{
+			int index = q[rd++];
+			for (auto k = g.voisins[index].begin(); k != g.voisins[index].end(); k++)
+				if (*k == i && index != *j)
+				{	
+					min = dist[index] + 1 < min ? dist[index] + 1 : min;
+					break;
+				}
+				else if (*k!=i && dist[*k] == NMAX)
+				{
+					q[wr++] = *k;
+					dist[*k] = dist[index] + 1;
+				}
+		}
+	}
+	return min;
 }
 

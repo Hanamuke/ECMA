@@ -16,9 +16,9 @@ void toTulip(Graphe const&, string path);
 
 int main()
 {
-	string problem = "test/";
+	//string problem = "test/";
 	//string problem = "si2_bvg_b03_200/si2_b03_m200.02/";
-	//string problem = "si4_rand_r005_200/si4_r005_m200.04/";
+	string problem = "si4_rand_r005_200/si4_r005_m200.04/";
 	//string problem="scalefree/F.01/";
 	IloEnv env;
 	/*Le prétraitement renvoie une matrice x_mask qui indique si x_ij peut être à un. On introduira seulement donc les termes nécessaires
