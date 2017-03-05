@@ -7,11 +7,9 @@
 #include <queue>
 #include <set>
 using namespace std;
-void setArc(Graphe const &, Graphe const &, vector<vector<bool>>&, int, int, vector<int> &, int&);
-void unsetArc(vector<vector<bool>>&, vector<int> &, int&);
-void AC(Graphe const &, Graphe const &, vector<vector<bool>>&, vector<vector<int>>&);
-void SC(Graphe const &, Graphe const &, vector<vector<bool>>&);
-bool pretraitement(Graphe const & g, Graphe const & _g, vector<vector<bool>> & x_mask)
+
+
+bool pretraitement(Graphe const & g, Graphe const & _g, vector<vector<bool>> & x_mask, bool heur)
 {
 	vector<int> f_mask;
 	f_mask.resize(g.n*_g.n);
@@ -36,7 +34,8 @@ bool pretraitement(Graphe const & g, Graphe const & _g, vector<vector<bool>> & x
 			x_mask[i][j] = true;
 
 	SC(g, _g, x_mask);
-	AC(g, _g, x_mask, nbCouplage); //j'ai randomisé l'algo de couplage 
+	if(!heur)
+		AC(g, _g, x_mask, nbCouplage); //j'ai randomisé l'algo de couplage 
 	//j'ai l'impression que ça l'a ralenti un peu mais nbCouplage est équilibré avant ça chargait la diagonale.
 	/*for (int j = 0; j < N; j++)
 			cout << nbCouplage[0][j] <<" ";

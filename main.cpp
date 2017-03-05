@@ -8,24 +8,27 @@
 #define FORCE_PREPROCESSING
 using namespace std;
 
-void loadModel(IloEnv, IloModel, Graphe const &, Graphe const &, vector<vector<bool>> const &, IloIntVarArray);
+bool loadModel(IloEnv, IloModel, Graphe const &, Graphe const &, vector<vector<bool>> const &, IloIntVarArray);
 void toTulip(Graphe const&, string path);
-void intersection(IloIntArray & a, IloIntArray & b, IloOr & retour, IloIntVar & x);
+void heuristique(Graphe const & g, Graphe const & _g, vector<vector<bool>> & x_mask, IloEnv env);
 
 
 
 int main()
 {
+	
+	
+	bool heur=false;
 	//string problem = "test/";
 	// Instances à traiter
-	//string problem = "si2_bvg_b03_800/si2_b03_m800.00/";
+	//string problem = "si2_bvg_b03_200/si2_b03_m200.00/";
 	//string problem = "si2_bvg_b03_800/si2_b03_m800.01/";
-	string problem = "si2_bvg_b03_800/si2_b03_m800.02/";
+	//string problem = "si2_bvg_b03m_800/si2_b03m_m800.02/";
 	//string problem = "si2_bvg_b03_800/si2_b03_m800.03/";
 	//string problem = "si2_bvg_b03_800/si2_b03_m800.04/";
-	//string problem = "si2_bvg_b03_800/si2_b03_m800.05/";
+	//string problem = "si2_bvg_b03m_800/si2_b03m_m800.05/";
 	//string problem = "si2_bvg_b03_800/si2_b03_m800.06/";
-	//string problem = "si2_bvg_b03_800/si2_b03_m800.07/";
+	string problem = "si2_bvg_b03m_400/si2_b03m_m400.07/";
 	//string problem = "si2_bvg_b03_800/si2_b03_m800.08/";
 	//string problem = "si2_bvg_b03_800/si2_b03_m800.09/";
 		
@@ -37,9 +40,7 @@ int main()
 
 	try
 	{
-		IloModel model(env);
-		IloIntArray vals(env);
-		IloIntVarArray x(env);
+		
 		//{ //ces accolades font restreingnent la range des graphes et de x_mask, ils sont détruits à la fin des accolades, ils occuperont pas de la mémoire pendant la résolution.
 		Graphe g;
 		init(g, BENCH_FOLDER + problem + "target");
@@ -47,12 +48,10 @@ int main()
 		init(g_barre, BENCH_FOLDER + problem + "pattern");
 		//toTulip(g, BENCH_FOLDER + problem + "tp_target.tlp");
 		//toTulip(g_barre, BENCH_FOLDER + problem + "tp_patter.tlp");
-		for (int i = 0; i < g_barre.n; i++)
-			x.add(IloIntVar(env));
-		model.add(x);
+		
 		vector<vector<bool>> x_mask;
 #ifdef FORCE_PREPROCESSING
-		pretraitement(g, g_barre, x_mask);
+		pretraitement(g, g_barre, x_mask, heur);
 		save_pretraitement(BENCH_FOLDER + problem + "mask", x_mask);
 #endif
 #ifndef FORCE_PREPROCESSING
@@ -62,25 +61,32 @@ int main()
 			save_pretraitement(BENCH_FOLDER + problem + "mask", x_mask);
 		}
 #endif	
-		
-		/*for(int i=0; i<g.n; i++){
-			for(int j=0; j<g.n; j++)
-				cout<<g.A[i][j]<<" ";
-			cout<<endl;
-		}*/
 
-		loadModel(env, model, g, g_barre, x_mask, x);
-		IloCP cp(model);
+		if(!heur){
 
+			IloModel model(env);
+			IloIntArray vals(env);
+			IloIntVarArray x(env);
+			for (int i = 0; i < g_barre.n; i++)
+				x.add(IloIntVar(env));
+			model.add(x);
 
-		if(cp.solve()){
+			bool solvable=loadModel(env, model, g, g_barre, x_mask, x);
+			IloCP cp(model);
 
-			env.out() << "Solution retour = " << cp.getStatus() << endl;			
-			for(int i=0; i<g_barre.n; i++){
-				cp.out()<< i<<" : "<<cp.getValue(x[i])<<endl;
-			}
+			if(!solvable)
+				cout<<"Aucune Solution"<<endl;
+			else if(cp.solve()){
 
-		} 
+				env.out() << "Solution retour = " << cp.getStatus() << endl;			
+				for(int i=0; i<g_barre.n; i++){
+					cp.out()<< i<<" : "<<cp.getValue(x[i])<<endl;
+				}
+
+			} 
+		}
+		else
+			heuristique(g, g_barre,  x_mask, env);
 		
 	}
 	catch (IloException& e) {
@@ -91,10 +97,11 @@ int main()
 	}
 	env.end();
 	cin.get();
+
 	return 0;
 }
 
-void loadModel(IloEnv env, IloModel model, Graphe const & g, Graphe const & _g, vector<vector<bool>> const & x_mask, IloIntVarArray x)
+bool loadModel(IloEnv env, IloModel model, Graphe const & g, Graphe const & _g, vector<vector<bool>> const & x_mask, IloIntVarArray x)
 {
 	
 	for(int i=0; i<_g.n; i++){
@@ -102,7 +109,11 @@ void loadModel(IloEnv env, IloModel model, Graphe const & g, Graphe const & _g, 
 		for(int j=0; j<g.n; j++)
 			if(x_mask[i][j])
 				domain.add(j);
-		x[i].setPossibleValues(domain);
+		if(domain.getSize()>0){
+			x[i].setPossibleValues(domain);
+		}
+		else
+			return false;
 	}
 
 	model.add(IloAllDiff(env, x));
@@ -115,19 +126,23 @@ void loadModel(IloEnv env, IloModel model, Graphe const & g, Graphe const & _g, 
 				IloIntArray domainj(env);
 				x[j].getPossibleValues(domainj);
 				for(int iter=0; iter<domaini.getSize(); iter++){
-					IloIntArray voisin(env);
 					IloInt y=domaini[iter];
-					for(int k=0; k<g.n; k++)
-						if(g.A[y].test(k))
-							voisin.add(k);
 					IloOr inter(env);
-
-					intersection(domainj, voisin, inter, x[j]);
-					model.add(IloIfThen(env, x[i]==y, inter));
+					int vide=true;
+					for(int k=0; k<g.n; k++)
+						if(g.A[y].test(k) && x_mask[j][k]){
+							vide=false;
+							inter.add(x[j]==k);
+						}
+					
+					if(vide)
+						model.add(x[i]!=y);
+					else
+						model.add(IloIfThen(env, x[i]==y, inter));
 				}
 			}
 
-			
+	return true;
 }
 
 void toTulip(Graphe const& g, string path)
@@ -149,44 +164,118 @@ void toTulip(Graphe const& g, string path)
 	f << ")";
 }
 
+void verification(IloCP cp, IloIntVarArray & x, Graphe const & g, Graphe const & _g){
+	int verif=true;
+	for(int i=0; i<_g.n; i++)
+		for(int j=0; j<_g.n; j++)
+			if(_g.A[i].test(j)){
+				int imi=cp.getValue(x[i]);
+				int imj=cp.getValue(x[j]);
+				verif=verif&&(g.A[imi].test(imj));
+			}
+	cout<<"Verif : "<<verif<<endl;
 
-void intersection(IloIntArray & a, IloIntArray & b, IloOr & retour, IloIntVar & x){
-	int sa=a.getSize();
-	int sb=b.getSize();
-	int posa=0;
-	int posb=0;
-	bool fin=false;
-
-	while((posa<sa || posb<sb) && !fin){
-		if(a[posa]==b[posb]){
-			retour = retour || x==a[posa] ;
-			posa++;
-			if(posa==sa)
-				fin=true;
-			posb++;
-			if(posb==sb)
-				fin=true;
-		}
-		else if(posa==sa-1 && a[posa]<b[posb])
-			fin=true;
-		else if(posb==sb-1 && b[posb]<a[posa])
-			fin=true;
-		else if(a[posa]<b[posb])
-			posa++;
-		else if(b[posb]<a[posa])
-			posb++;
-	}
-
-	/*
-		cout<<endl;
-	for(int i=0; i<sa; i++)
-		cout<<a[i]<<" ";
-	cout<<endl;
-	for(int i=0; i<sb; i++)
-		cout<<b[i]<<" ";
-	cout<<endl;
-
-	cout<<retour<<endl;*/
-	
 }
 
+
+void heuristique(Graphe const & g, Graphe const & _g, vector<vector<bool>> & x_mask, IloEnv env){
+		
+		
+		int N=g.n;
+		int _N=_g.n;
+
+		
+		int minn=N+1;
+		int argi=-1;
+		minn=N+1;
+		for(int i=0; i<_N; i++){
+			
+			int compt=0;
+			for(int j=0; j<N; j++)
+				if(x_mask[i][j])
+					compt++;
+			if(compt<minn && compt>1){
+				minn=compt;
+				argi=i;
+			}
+		}
+		cout<<"argi : "<<argi<<", minn : "<<minn<<endl;
+
+		for(int k=0; k<10; k++){
+			if(x_mask[argi][k]){
+				//Preparation du (Un)SetArc
+				vector<int> f_mask;
+				f_mask.resize(g.n*_g.n);
+				int ptr = 0;
+				vector<vector<int>> nbCouplage;
+				nbCouplage.resize(_N);
+				for (int i = 0; i < _N; i++)
+				{
+					x_mask[i].resize(N);
+					nbCouplage[i].resize(N);
+				}
+
+
+				setArc(g, _g, x_mask, argi, k, f_mask,ptr);
+				minn=N+1;
+				while(minn>N/100){
+					int argi2=-1;
+					minn=N+1;
+					for(int i=0; i<_N; i++){
+				
+						int compt=0;
+						for(int j=0; j<N; j++)
+							if(x_mask[i][j])
+								compt++;
+						if(compt<minn && compt>1){
+							minn=compt;
+							argi2=i;
+						}
+					}
+
+					int argj=rand()%N;
+					while(!x_mask[argi2][argj])
+						if(argj==N-1)
+							argj=0;
+						else
+							argj++;
+			
+			
+					cout<<"argi2 : "<<argi2<<", argj : "<<argj<<" minn : "<<minn<<endl;
+					setArc(g, _g, x_mask, argi2, argj, f_mask,ptr);
+				}
+				cout<<"Debut AC"<<endl;
+				vector<vector<bool>> essai=x_mask;
+				AC(g,_g,essai, nbCouplage); //propagation sur une copie
+				
+
+
+				IloModel model(env);
+				IloIntArray vals(env);
+				IloIntVarArray x(env);
+				for (int i = 0; i < _N; i++)
+					x.add(IloIntVar(env));
+				model.add(x);
+				bool solvable=loadModel(env, model, g, _g, essai, x);
+				IloCP cp(model);
+
+				if(solvable && cp.solve()){
+
+					env.out() << "Solution retour = " << cp.getStatus() << endl;			
+					for(int i=0; i<_N; i++){
+						cp.out()<< i<<" : "<<cp.getValue(x[i])<<endl;
+					}
+					verification(cp, x, g, _g);
+				} 
+				else{
+					cout<<"Pas de sol avec ce choix"<<endl;
+					unsetArc(x_mask, f_mask, ptr);
+				}
+			}
+		}
+
+		
+		
+
+		
+}
